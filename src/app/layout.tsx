@@ -1,4 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+
+export const viewport: Viewport = { width: "device-width", initialScale: 1, maximumScale: 1 };
+
 import { DM_Sans, DM_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";

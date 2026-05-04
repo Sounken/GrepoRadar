@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@/components/theme-provider";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StatPill } from "@/components/ui/stat-pill";
@@ -76,6 +77,7 @@ export function DashboardClient({
 }: DashboardClientProps) {
   const { t } = useTheme();
   const router = useRouter();
+  const isMobile = useIsMobile();
   const [hlTown, setHlTown] = useState<MapTown | null>(null);
 
   const rankColors = [t.peachDeep, t.lavenderDeep, t.sageDeep, t.roseDeep, t.powderDeep];
@@ -85,23 +87,23 @@ export function DashboardClient({
       style={{
         height: "100%",
         overflow: "auto",
-        padding: "20px 24px",
+        padding: isMobile ? "14px 12px" : "20px 24px",
         display: "flex",
         flexDirection: "column",
-        gap: 20,
+        gap: 16,
       }}
     >
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+      <div style={{ display: "flex", alignItems: isMobile ? "flex-start" : "center", gap: 12, flexDirection: isMobile ? "column" : "row" }}>
         <div>
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: t.text, letterSpacing: -0.5 }}>
+          <h1 style={{ fontSize: isMobile ? 17 : 20, fontWeight: 700, color: t.text, letterSpacing: -0.5 }}>
             Dashboard · FR180
           </h1>
           <div style={{ color: t.textLight, fontSize: 12, marginTop: 2 }}>
             Vue d'ensemble du serveur
           </div>
         </div>
-        <div style={{ marginLeft: "auto", maxWidth: 340, width: "100%" }}>
+        <div style={{ marginLeft: isMobile ? 0 : "auto", maxWidth: isMobile ? "100%" : 340, width: "100%" }}>
           <PlayerSearchBar placeholder="Rechercher un joueur…" />
         </div>
       </div>
@@ -146,7 +148,7 @@ export function DashboardClient({
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "1fr 1fr 1.4fr",
+              gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1.4fr",
               gap: 16,
               alignItems: "start",
             }}
@@ -427,7 +429,7 @@ export function DashboardClient({
           </div>
 
           {/* Alliance conquests + losses */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
             {/* Alliance Conquests */}
             <Card pad="0">
               <div

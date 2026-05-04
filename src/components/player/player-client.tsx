@@ -2,6 +2,7 @@
 import { useState, useMemo, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@/components/theme-provider";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StatPill } from "@/components/ui/stat-pill";
@@ -66,6 +67,7 @@ function timeAgo(date: Date): string {
 export function PlayerClient({ player, towns, history, recentConquers }: PlayerClientProps) {
   const { t } = useTheme();
   const router = useRouter();
+  const isMobile = useIsMobile();
   const [hlTown, setHlTown] = useState<MapTown | null>(null);
 
   const pointHistory = history.map((h) => h.points);
@@ -145,10 +147,10 @@ export function PlayerClient({ player, towns, history, recentConquers }: PlayerC
       style={{
         height: "100%",
         overflow: "auto",
-        padding: "20px 24px",
+        padding: isMobile ? "14px 12px" : "20px 24px",
         display: "flex",
         flexDirection: "column",
-        gap: 18,
+        gap: 16,
       }}
     >
       {/* Breadcrumb */}
@@ -214,7 +216,7 @@ export function PlayerClient({ player, towns, history, recentConquers }: PlayerC
       </Card>
 
       {/* Charts row */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
         {/* Sparkline évolution */}
         <Card>
           <div style={{ fontWeight: 600, fontSize: 13, color: t.text, marginBottom: 12 }}>
@@ -287,7 +289,7 @@ export function PlayerClient({ player, towns, history, recentConquers }: PlayerC
               towns={mapTowns}
               highlightId={hlTown?.id}
               onTownClick={(town) => setHlTown((prev) => (prev?.id === town.id ? null : town))}
-              height={340}
+              height={isMobile ? 200 : 340}
             />
           </div>
         </Card>
@@ -298,6 +300,7 @@ export function PlayerClient({ player, towns, history, recentConquers }: PlayerC
         <div style={{ padding: "14px 18px 10px", borderBottom: `1px solid ${t.border}` }}>
           <span style={{ fontWeight: 600, fontSize: 14, color: t.text }}>Liste des villes</span>
         </div>
+        <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ background: t.bg }}>
@@ -361,6 +364,7 @@ export function PlayerClient({ player, towns, history, recentConquers }: PlayerC
             ))}
           </tbody>
         </table>
+        </div>
       </Card>
 
       {/* History table */}

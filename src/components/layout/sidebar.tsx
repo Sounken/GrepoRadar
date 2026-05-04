@@ -3,14 +3,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "@/components/theme-provider";
 import { THEMES, type ThemeKey } from "@/lib/themes";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 
 const NAV = [
   {
     id: "dashboard",
     href: "/",
     label: "Dashboard",
-    icon: (
-      <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
+    icon: (size = 14) => (
+      <svg width={size} height={size} viewBox="0 0 15 15" fill="none">
         <rect x="1" y="1" width="5.5" height="5.5" rx="1.2" fill="currentColor" />
         <rect x="8.5" y="1" width="5.5" height="5.5" rx="1.2" fill="currentColor" />
         <rect x="1" y="8.5" width="5.5" height="5.5" rx="1.2" fill="currentColor" />
@@ -22,8 +23,8 @@ const NAV = [
     id: "conquest",
     href: "/conquest",
     label: "Conquête",
-    icon: (
-      <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
+    icon: (size = 14) => (
+      <svg width={size} height={size} viewBox="0 0 15 15" fill="none">
         <path
           d="M7.5 1.5L9.2 5.8H13.8L10.1 8.4L11.5 12.8L7.5 10.3L3.5 12.8L4.9 8.4L1.2 5.8H5.8L7.5 1.5Z"
           fill="currentColor"
@@ -36,7 +37,85 @@ const NAV = [
 export function Sidebar() {
   const { t, themeKey, setTheme } = useTheme();
   const pathname = usePathname();
+  const isMobile = useIsMobile();
 
+  const themeKeys = Object.keys(THEMES) as ThemeKey[];
+  const cycleTheme = () => {
+    const idx = themeKeys.indexOf(themeKey);
+    setTheme(themeKeys[(idx + 1) % themeKeys.length]);
+  };
+
+  // ── Mobile: barre de navigation basse ──────────────────────────────────────
+  if (isMobile) {
+    return (
+      <nav
+        style={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: 58,
+          background: t.bgSidebar,
+          borderTop: `1px solid ${t.bgSidebarBorder}`,
+          display: "flex",
+          alignItems: "stretch",
+          zIndex: 100,
+        }}
+      >
+        {NAV.map((n) => {
+          const active = n.href === "/" ? pathname === "/" : pathname.startsWith(n.href);
+          return (
+            <Link
+              key={n.id}
+              href={n.href}
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 3,
+                color: active ? t.accent : t.textOnDarkDim,
+                textDecoration: "none",
+                borderTop: `2px solid ${active ? t.accent : "transparent"}`,
+                paddingTop: 2,
+              }}
+            >
+              <span style={{ color: active ? t.accent : t.textOnDarkDim, display: "flex" }}>
+                {n.icon(18)}
+              </span>
+              <span style={{ fontSize: 10, fontWeight: active ? 600 : 400 }}>{n.label}</span>
+            </Link>
+          );
+        })}
+        <button
+          onClick={cycleTheme}
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 3,
+            background: "none",
+            border: "none",
+            borderTop: "2px solid transparent",
+            color: t.textOnDarkDim,
+            cursor: "pointer",
+            paddingTop: 2,
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+            <circle cx="10" cy="10" r="8.5" stroke="currentColor" strokeWidth="1.4" />
+            <path d="M10 4.5C10 4.5 14.5 8 14.5 10.5C14.5 13 12.5 15 10 15C7.5 15 5.5 13 5.5 10.5C5.5 8 10 4.5 10 4.5Z" fill="currentColor" opacity="0.5" />
+          </svg>
+          <span style={{ fontSize: 10 }}>{THEMES[themeKey].name}</span>
+        </button>
+      </nav>
+    );
+  }
+
+  // ── Desktop: sidebar latérale ───────────────────────────────────────────────
   return (
     <div
       style={{
@@ -119,16 +198,14 @@ export function Sidebar() {
                 transition: "background 0.1s",
               }}
               onMouseEnter={(e) => {
-                if (!active)
-                  (e.currentTarget as HTMLElement).style.background = t.bgSidebarHover;
+                if (!active) (e.currentTarget as HTMLElement).style.background = t.bgSidebarHover;
               }}
               onMouseLeave={(e) => {
-                if (!active)
-                  (e.currentTarget as HTMLElement).style.background = "transparent";
+                if (!active) (e.currentTarget as HTMLElement).style.background = "transparent";
               }}
             >
               <span style={{ color: active ? t.accent : t.textOnDarkDim, display: "flex", flexShrink: 0 }}>
-                {n.icon}
+                {n.icon(14)}
               </span>
               {n.label}
               {active && (
@@ -162,7 +239,7 @@ export function Sidebar() {
           Thème
         </div>
         <div style={{ display: "flex", gap: 4 }}>
-          {(Object.keys(THEMES) as ThemeKey[]).map((key) => (
+          {themeKeys.map((key) => (
             <button
               key={key}
               onClick={() => setTheme(key)}
