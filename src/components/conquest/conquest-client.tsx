@@ -480,8 +480,12 @@ export function ConquestClient() {
                     {filtered.map((item) => {
                       const isSel = selectedTarget?.id === item.id;
                       const isGhost = !item.playerId;
-                      const inactiveTip = item.inactiveDays != null
-                        ? `Inactif depuis ${item.inactiveDays} jour${item.inactiveDays > 1 ? "s" : ""}`
+                      const inactiveTip = isGhost
+                        ? "Ville fantôme — sans propriétaire"
+                        : item.inactiveDays != null
+                        ? `Inactif depuis ${item.inactiveDays} jour${item.inactiveDays > 1 ? "s" : ""} · score ${item.inactivity}/100`
+                        : item.inactivity >= 20
+                        ? `Score d'inactivité : ${item.inactivity}/100 (historique insuffisant)`
                         : undefined;
                       return (
                         <tr
