@@ -28,7 +28,7 @@ const TYPE_DOTS: Record<string, string> = {
   active: "#22c78a",
   suspect: "#f59e0b",
   inactive: "#f43f5e",
-  ghost: "#4a6080",
+  ghost: "#9ca3af",
 };
 
 // Couleur de fond (correspond à l'eau dans le watertile)

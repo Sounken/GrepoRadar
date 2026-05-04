@@ -50,8 +50,8 @@ function colonyTime(distance: number): string {
 
 function townType(town: ApiTown): string {
   if (!town.playerId) return "ghost";
-  if (town.inactivity >= 70) return "inactive";
-  if (town.inactivity >= 40) return "suspect";
+  if (town.inactivity >= 40) return "inactive";
+  if (town.inactivity >= 20) return "suspect";
   return "active";
 }
 
@@ -125,7 +125,7 @@ export function ConquestClient() {
       if (filters.maxPoints && t.points > filters.maxPoints) return false;
       if (filters.hideGhost && !t.playerId) return false;
       if (filters.onlyGhost && t.playerId !== null) return false;
-      if (filters.onlyInactive && t.inactivity < 40) return false;
+      if (filters.onlyInactive && t.inactivity < 20) return false;
       return true;
     });
     const val = (x: ApiTown) =>
@@ -459,7 +459,7 @@ export function ConquestClient() {
                 {filtered.filter((x) => x.targetScore >= 80).length} top cibles
               </span>
               <span style={{ color: t.red, fontSize: 12 }}>
-                {filtered.filter((x) => x.inactivity >= 70).length} inactifs
+                {filtered.filter((x) => x.inactivity >= 40).length} inactifs
               </span>
               <span style={{ color: t.lavenderDeep, fontSize: 12 }}>
                 {filtered.filter((x) => !x.playerId).length} fantômes
@@ -522,10 +522,10 @@ export function ConquestClient() {
                         const isGhost = !item.playerId;
                         const inactiveTip = isGhost
                           ? "Ville fantôme — sans propriétaire"
-                          : item.inactiveDays != null
-                          ? `Inactif depuis ${item.inactiveDays} jour${item.inactiveDays > 1 ? "s" : ""} · score ${item.inactivity}/100`
+                          : item.inactiveDays != null && item.inactiveDays > 0
+                          ? `Inactif depuis ${item.inactiveDays} jour${item.inactiveDays > 1 ? "s" : ""} · score ${item.inactivity}/60`
                           : item.inactivity >= 20
-                          ? `Score d'inactivité : ${item.inactivity}/100 (historique insuffisant)`
+                          ? `Score d'inactivité : ${item.inactivity}/60 (historique insuffisant)`
                           : undefined;
                         return (
                           <tr
@@ -546,7 +546,6 @@ export function ConquestClient() {
                               background: isSel ? t.lavender : "transparent",
                               borderBottom: `1px solid ${t.border}`,
                               cursor: "pointer",
-                              opacity: isGhost ? 0.55 : 1,
                             }}
                           >
                             {/* Cell 1: town name + player + alliance + distance */}
@@ -585,22 +584,17 @@ export function ConquestClient() {
                               </div>
                             </td>
                             {/* Cell 2: type badge */}
-                            <td style={{ padding: "7px 8px" }}>
-                              <TypeBadge type={townType(item)} />
-                            </td>
-                            {/* Cell 3: inactivity bar + days */}
                             <td
                               style={{ padding: "7px 8px" }}
                               onMouseEnter={inactiveTip ? (e) => setTooltip({ text: inactiveTip, x: e.clientX, y: e.clientY }) : undefined}
                               onMouseMove={inactiveTip ? (e) => setTooltip((p) => p ? { ...p, x: e.clientX, y: e.clientY } : null) : undefined}
                               onMouseLeave={inactiveTip ? () => setTooltip(null) : undefined}
                             >
-                              <MiniBar val={item.inactivity} />
-                              {item.inactiveDays != null && (
-                                <div style={{ fontSize: 9, color: t.textDim, marginTop: 1 }}>
-                                  {item.inactiveDays}j
-                                </div>
-                              )}
+                              <TypeBadge type={townType(item)} />
+                            </td>
+                            {/* Cell 3: inactivity bar */}
+                            <td style={{ padding: "7px 8px" }}>
+                              <MiniBar val={item.inactivity} max={60} />
                             </td>
                             {/* Cell 4: score chip */}
                             <td style={{ padding: "7px 8px" }}>
@@ -638,10 +632,10 @@ export function ConquestClient() {
                         const isGhost = !item.playerId;
                         const inactiveTip = isGhost
                           ? "Ville fantôme — sans propriétaire"
-                          : item.inactiveDays != null
-                          ? `Inactif depuis ${item.inactiveDays} jour${item.inactiveDays > 1 ? "s" : ""} · score ${item.inactivity}/100`
+                          : item.inactiveDays != null && item.inactiveDays > 0
+                          ? `Inactif depuis ${item.inactiveDays} jour${item.inactiveDays > 1 ? "s" : ""} · score ${item.inactivity}/60`
                           : item.inactivity >= 20
-                          ? `Score d'inactivité : ${item.inactivity}/100 (historique insuffisant)`
+                          ? `Score d'inactivité : ${item.inactivity}/60 (historique insuffisant)`
                           : undefined;
                         return (
                           <tr
@@ -662,7 +656,6 @@ export function ConquestClient() {
                               background: isSel ? t.lavender : "transparent",
                               borderBottom: `1px solid ${t.border}`,
                               cursor: "pointer",
-                              opacity: isGhost ? 0.55 : 1,
                             }}
                           >
                             <td style={{ padding: "8px 12px" }}>
@@ -746,21 +739,16 @@ export function ConquestClient() {
                                 {item.distance.toFixed(1)}
                               </span>
                             </td>
-                            <td style={{ padding: "8px 12px" }}>
-                              <TypeBadge type={townType(item)} />
-                            </td>
                             <td
                               style={{ padding: "8px 12px" }}
                               onMouseEnter={inactiveTip ? (e) => setTooltip({ text: inactiveTip, x: e.clientX, y: e.clientY }) : undefined}
                               onMouseMove={inactiveTip ? (e) => setTooltip((p) => p ? { ...p, x: e.clientX, y: e.clientY } : null) : undefined}
                               onMouseLeave={inactiveTip ? () => setTooltip(null) : undefined}
                             >
-                              <MiniBar val={item.inactivity} />
-                              {item.inactiveDays != null && (
-                                <div style={{ fontSize: 9, color: t.textDim, marginTop: 1 }}>
-                                  {item.inactiveDays}j
-                                </div>
-                              )}
+                              <TypeBadge type={townType(item)} />
+                            </td>
+                            <td style={{ padding: "8px 12px" }}>
+                              <MiniBar val={item.inactivity} max={60} />
                             </td>
                             <td style={{ padding: "8px 12px" }}>
                               <ScoreChip score={item.targetScore} />
@@ -816,7 +804,7 @@ export function ConquestClient() {
                   </div>
                   <div>
                     <div style={{ color: t.textDim, fontSize: 9 }}>INACTIVITÉ</div>
-                    <div style={{ color: t.red, fontSize: 12 }}>{selectedTarget.inactivity}/100</div>
+                    <div style={{ color: t.red, fontSize: 12 }}>{selectedTarget.inactivity}/60</div>
                   </div>
                 </div>
                 <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
