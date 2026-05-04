@@ -70,6 +70,7 @@ export async function GET(request: Request) {
         points: p.points,
         rank: p.rank,
         towns: p.towns,
+        allianceId: p.allianceId ?? null,
         recordedAt: now,
       }));
       // Batch par 500 pour éviter les limites

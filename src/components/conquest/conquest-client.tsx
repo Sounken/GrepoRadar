@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useTheme } from "@/components/theme-provider";
 import { TypeBadge } from "@/components/ui/badge";
 import { MiniBar, ScoreChip } from "@/components/ui/score-chip";
@@ -21,6 +22,7 @@ type ApiTown = {
   allianceName: string | null;
   distance: number;
   inactivity: number;
+  inactiveDays: number | null;
   targetScore: number;
 };
 
@@ -30,9 +32,20 @@ type Filters = {
   maxPoints: number | null;
   onlyInactive: boolean;
   hideGhost: boolean;
+  onlyGhost: boolean;
 };
 
 type SortKey = "targetScore" | "inactivity" | "distance" | "points";
+
+// Calibré empiriquement sur FR180 : temps (min) ≈ 1.3 × distance²
+function colonyTime(distance: number): string {
+  const totalMin = Math.round(1.3 * distance * distance);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h === 0) return `${m}min`;
+  if (m === 0) return `${h}h`;
+  return `${h}h${m.toString().padStart(2, "0")}`;
+}
 
 function townType(town: ApiTown): string {
   if (!town.playerId) return "ghost";
@@ -43,6 +56,7 @@ function townType(town: ApiTown): string {
 
 export function ConquestClient() {
   const { t } = useTheme();
+  const router = useRouter();
   const [originSearchQ, setOriginSearchQ] = useState("");
   const [fromTownId, setFromTownId] = useState<number | null>(null);
   const [fromTownLabel, setFromTownLabel] = useState<{ name: string; x: number; y: number } | null>(null);
@@ -55,12 +69,20 @@ export function ConquestClient() {
     maxPoints: null,
     onlyInactive: false,
     hideGhost: false,
+    onlyGhost: false,
   });
   const [sortKey, setSortKey] = useState<SortKey>("targetScore");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
 
-  const fc = (k: keyof Filters, v: Filters[keyof Filters]) =>
-    setFilters((f) => ({ ...f, [k]: v }));
+  const fc = (k: keyof Filters, v: Filters[keyof Filters]) => {
+    if (k === "onlyGhost" && v === true)
+      setFilters((f) => ({ ...f, onlyGhost: true, hideGhost: false }));
+    else if (k === "hideGhost" && v === true)
+      setFilters((f) => ({ ...f, hideGhost: true, onlyGhost: false }));
+    else
+      setFilters((f) => ({ ...f, [k]: v }));
+  };
 
   const toggleSort = (k: SortKey) => {
     if (sortKey === k) setSortDir((d) => (d === "desc" ? "asc" : "desc"));
@@ -80,6 +102,11 @@ export function ConquestClient() {
       const res = await fetch(
         `/api/conquest?townId=${town.id}&maxDistance=${filters.maxDist ?? 30}`
       );
+      if (!res.ok) {
+        console.error("Conquest API error:", res.status);
+        setTargets([]);
+        return;
+      }
       const data = await res.json();
       setTargets(data.targets ?? []);
     } finally {
@@ -93,6 +120,7 @@ export function ConquestClient() {
       if (filters.minPoints && t.points < filters.minPoints) return false;
       if (filters.maxPoints && t.points > filters.maxPoints) return false;
       if (filters.hideGhost && !t.playerId) return false;
+      if (filters.onlyGhost && t.playerId !== null) return false;
       if (filters.onlyInactive && t.inactivity < 40) return false;
       return true;
     });
@@ -159,6 +187,28 @@ export function ConquestClient() {
 
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      {/* Tooltip custom */}
+      {tooltip && (
+        <div
+          style={{
+            position: "fixed",
+            left: tooltip.x + 14,
+            top: tooltip.y - 32,
+            background: t.text,
+            color: t.bg,
+            padding: "4px 10px",
+            borderRadius: 6,
+            fontSize: 11,
+            fontWeight: 500,
+            whiteSpace: "nowrap",
+            zIndex: 9999,
+            pointerEvents: "none",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.25)",
+          }}
+        >
+          {tooltip.text}
+        </div>
+      )}
       {/* Header */}
       <div
         style={{
@@ -301,7 +351,8 @@ export function ConquestClient() {
               {(
                 [
                   { label: "Inactifs seulement", key: "onlyInactive" as const },
-                  { label: "Cacher fantômes", key: "hideGhost" as const },
+                  { label: "Masquer fantômes", key: "hideGhost" as const },
+                  { label: "Fantôme uniquement", key: "onlyGhost" as const },
                 ] as { label: string; key: keyof Filters }[]
               ).map((f) => (
                 <label
@@ -428,6 +479,10 @@ export function ConquestClient() {
                   <tbody>
                     {filtered.map((item) => {
                       const isSel = selectedTarget?.id === item.id;
+                      const isGhost = !item.playerId;
+                      const inactiveTip = item.inactiveDays != null
+                        ? `Inactif depuis ${item.inactiveDays} jour${item.inactiveDays > 1 ? "s" : ""}`
+                        : undefined;
                       return (
                         <tr
                           key={item.id}
@@ -447,10 +502,11 @@ export function ConquestClient() {
                             background: isSel ? t.lavender : "transparent",
                             borderBottom: `1px solid ${t.border}`,
                             cursor: "pointer",
+                            opacity: isGhost ? 0.55 : 1,
                           }}
                         >
                           <td style={{ padding: "8px 12px" }}>
-                            <div style={{ fontWeight: 500, color: t.text }}>{item.name}</div>
+                            <div style={{ fontWeight: 500, color: isGhost ? t.textDim : t.text }}>{item.name}</div>
                             <div
                               style={{
                                 color: t.textDim,
@@ -462,7 +518,20 @@ export function ConquestClient() {
                             </div>
                           </td>
                           <td style={{ padding: "8px 12px" }}>
-                            <div style={{ color: t.textMid, fontSize: 11 }}>
+                            <div
+                              onClick={(e) => {
+                                if (!item.playerId) return;
+                                e.stopPropagation();
+                                router.push(`/player/${item.playerId}`);
+                              }}
+                              style={{
+                                color: item.playerId ? t.lavenderDeep : t.textDim,
+                                fontSize: 11,
+                                cursor: item.playerId ? "pointer" : "default",
+                                textDecoration: item.playerId ? "underline" : "none",
+                                textUnderlineOffset: 2,
+                              }}
+                            >
                               {item.playerName ?? "—"}
                             </div>
                             <div
@@ -490,6 +559,17 @@ export function ConquestClient() {
                           </td>
                           <td style={{ padding: "8px 12px" }}>
                             <span
+                              onMouseEnter={(e) =>
+                                setTooltip({
+                                  text: `~${colonyTime(item.distance)} en navire de colonisation`,
+                                  x: e.clientX,
+                                  y: e.clientY,
+                                })
+                              }
+                              onMouseMove={(e) =>
+                                setTooltip((p) => p ? { ...p, x: e.clientX, y: e.clientY } : null)
+                              }
+                              onMouseLeave={() => setTooltip(null)}
                               style={{
                                 color:
                                   item.distance < 25
@@ -499,6 +579,8 @@ export function ConquestClient() {
                                     : t.red,
                                 fontWeight: 600,
                                 fontFamily: "var(--font-dm-mono), monospace",
+                                cursor: "default",
+                                borderBottom: `1px dashed ${t.border}`,
                               }}
                             >
                               {item.distance.toFixed(1)}
@@ -507,8 +589,18 @@ export function ConquestClient() {
                           <td style={{ padding: "8px 12px" }}>
                             <TypeBadge type={townType(item)} />
                           </td>
-                          <td style={{ padding: "8px 12px" }}>
+                          <td
+                            style={{ padding: "8px 12px" }}
+                            onMouseEnter={inactiveTip ? (e) => setTooltip({ text: inactiveTip, x: e.clientX, y: e.clientY }) : undefined}
+                            onMouseMove={inactiveTip ? (e) => setTooltip((p) => p ? { ...p, x: e.clientX, y: e.clientY } : null) : undefined}
+                            onMouseLeave={inactiveTip ? () => setTooltip(null) : undefined}
+                          >
                             <MiniBar val={item.inactivity} />
+                            {item.inactiveDays != null && (
+                              <div style={{ fontSize: 9, color: t.textDim, marginTop: 1 }}>
+                                {item.inactiveDays}j
+                              </div>
+                            )}
                           </td>
                           <td style={{ padding: "8px 12px" }}>
                             <ScoreChip score={item.targetScore} />

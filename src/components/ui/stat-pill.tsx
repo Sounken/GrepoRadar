@@ -35,7 +35,7 @@ export function StatPill({
       >
         {label}
       </span>
-      <span style={{ color: color ?? t.text, fontWeight: 700, fontSize: 16 }}>{value}</span>
+      <span suppressHydrationWarning style={{ color: color ?? t.text, fontWeight: 700, fontSize: 16 }}>{value}</span>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { towns, players, alliances, conquers, playerHistory } from "@/db/schema";
-import { eq, sql, desc, and, isNotNull } from "drizzle-orm";
+import { eq, sql, desc } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +12,25 @@ function grDistance(x1: number, y1: number, x2: number, y2: number): number {
   const wx = Math.min(dx, 1000 - dx);
   const wy = Math.min(dy, 1000 - dy);
   return Math.sqrt(wx * wx + wy * wy);
+}
+
+// Nombre de jours consécutifs sans changement de points (min 3 pour être "inactif")
+function calcInactiveDays(history: { points: number; recordedAt: Date }[]): number | null {
+  if (history.length < 2) return null;
+  const byDay = new Map<string, number>();
+  for (const h of history) {
+    const day = new Date(h.recordedAt).toISOString().split("T")[0];
+    byDay.set(day, h.points); // la dernière valeur du jour gagne (trié par recordedAt)
+  }
+  const days = [...byDay.entries()].sort((a, b) => b[0].localeCompare(a[0])); // plus récent en premier
+  if (days.length < 2) return null;
+  const latestPts = days[0][1];
+  let count = 1;
+  for (let i = 1; i < days.length; i++) {
+    if (days[i][1] === latestPts) count++;
+    else break;
+  }
+  return count >= 3 ? count : null;
 }
 
 // Score d'inactivité : 0 (actif) → 100 (fantôme)
@@ -72,7 +91,7 @@ export async function GET(request: Request) {
     .from(towns)
     .leftJoin(players, sql`${towns.playerId} = ${players.id}`)
     .leftJoin(alliances, sql`${players.allianceId} = ${alliances.id}`)
-    .where(and(isNotNull(towns.playerId), sql`${towns.id} != ${originTownId}`));
+    .where(sql`${towns.id} != ${originTownId}`);
 
   // Filtre par distance
   const nearby = allTowns
@@ -128,24 +147,23 @@ export async function GET(request: Request) {
       ? (now - new Date(lastCapture).getTime()) / 86400000
       : null;
 
-    // Require at least 2 distinct snapshots — with 1 snapshot oldest===newest
-    // and the scoring formula (points unchanged = +40) would wrongly mark everyone inactive
-    const hasRealHistory = hist.length >= 2 && oldest.recordedAt !== newest.recordedAt;
-    const inactivity = hasRealHistory
-      ? inactivityScore(
-          newest.points,
-          oldest.points,
-          newest.towns,
-          oldest.towns,
-          daysSinceConquer
-        )
+    const isGhost = !t.playerId;
+    const hasRealHistory = hist.length >= 2 && oldest?.recordedAt !== newest?.recordedAt;
+    const inactivity = isGhost
+      ? 100
+      : hasRealHistory
+      ? inactivityScore(newest.points, oldest.points, newest.towns, oldest.towns, daysSinceConquer)
       : 0;
+    const inactiveDays = isGhost ? null : calcInactiveDays(hist);
 
-    const targetScore = Math.round(
-      inactivity * 0.6 + (1 - Math.min(t.distance, maxDistance) / maxDistance) * 40
-    );
+    // Score sur 100 : inactivité (50) + points de la ville (30) + proximité (20)
+    // Les fantômes obtiennent directement le max d'inactivité
+    const MAX_TOWN_POINTS = 30000;
+    const pointsScore = Math.min(t.points / MAX_TOWN_POINTS, 1) * 30;
+    const distScore = (1 - Math.min(t.distance, maxDistance) / maxDistance) * 20;
+    const targetScore = Math.round(inactivity * 0.5 + pointsScore + distScore);
 
-    return { ...t, inactivity, targetScore };
+    return { ...t, inactivity, inactiveDays, targetScore };
   });
 
   return NextResponse.json({ origin: originTown[0], targets });

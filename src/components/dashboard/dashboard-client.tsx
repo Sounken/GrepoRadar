@@ -44,11 +44,19 @@ type TopConqueror = {
   conquestCount: number;
 };
 
+type AllianceStat = {
+  allianceId: number | null;
+  allianceName: string | null;
+  count: number;
+};
+
 interface DashboardClientProps {
   topPlayers: TopPlayer[];
   topAlliances: TopAlliance[];
   recentConquers: RecentConquer[];
   topConquerors: TopConqueror[];
+  allianceConquests: AllianceStat[];
+  allianceLosses: AllianceStat[];
 }
 
 function timeAgo(date: Date): string {
@@ -63,6 +71,8 @@ export function DashboardClient({
   topAlliances,
   recentConquers,
   topConquerors,
+  allianceConquests,
+  allianceLosses,
 }: DashboardClientProps) {
   const { t } = useTheme();
   const router = useRouter();
@@ -155,8 +165,8 @@ export function DashboardClient({
                 <span style={{ fontWeight: 600, fontSize: 14, color: t.text }}>Top Joueurs</span>
                 <Badge>Points</Badge>
               </div>
-              <div>
-                {topPlayers.slice(0, 5).map((p, i) => (
+              <div style={{ maxHeight: 360, overflowY: "auto" }}>
+                {topPlayers.map((p, i) => (
                   <div
                     key={p.id}
                     onClick={() => router.push(`/player/${p.id}`)}
@@ -166,7 +176,7 @@ export function DashboardClient({
                       gap: 10,
                       padding: "10px 18px",
                       borderBottom:
-                        i < 4 ? `1px solid ${t.border}` : "none",
+                        i < topPlayers.length - 1 ? `1px solid ${t.border}` : "none",
                       cursor: "pointer",
                     }}
                     onMouseEnter={(e) =>
@@ -223,7 +233,7 @@ export function DashboardClient({
                         textAlign: "right",
                       }}
                     >
-                      {p.points.toLocaleString()}
+                      {p.points.toLocaleString("fr-FR")}
                     </div>
                   </div>
                 ))}
@@ -245,16 +255,16 @@ export function DashboardClient({
                   Conquêtes récentes
                 </span>
                 <Badge color={t.peachDeep} bg={t.peach}>
-                  24h
+                  7j
                 </Badge>
               </div>
-              <div>
+              <div style={{ maxHeight: 360, overflowY: "auto" }}>
                 {recentConquers.length === 0 ? (
                   <div style={{ padding: "20px 18px", color: t.textDim, fontSize: 12 }}>
                     Aucune conquête dans les 24h
                   </div>
                 ) : (
-                  recentConquers.slice(0, 8).map((c, i) => (
+                  recentConquers.map((c, i) => (
                     <div
                       key={`${c.townId}-${i}`}
                       style={{
@@ -334,7 +344,7 @@ export function DashboardClient({
                         <div
                           style={{ fontSize: 10, color: t.textDim, paddingLeft: 12, marginTop: 1 }}
                         >
-                          {c.townPoints.toLocaleString()} pts
+                          {c.townPoints.toLocaleString("fr-FR")} pts
                         </div>
                       )}
                     </div>
@@ -358,10 +368,10 @@ export function DashboardClient({
                   Top Conquérants
                 </span>
                 <Badge color={t.roseDeep} bg={t.rose}>
-                  7 jours
+                  30 jours
                 </Badge>
               </div>
-              <div>
+              <div style={{ maxHeight: 360, overflowY: "auto" }}>
                 {topConquerors.length === 0 ? (
                   <div style={{ padding: "20px 18px", color: t.textDim, fontSize: 12 }}>
                     Aucune donnée
@@ -416,6 +426,115 @@ export function DashboardClient({
             </Card>
           </div>
 
+          {/* Alliance conquests + losses */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            {/* Alliance Conquests */}
+            <Card pad="0">
+              <div
+                style={{
+                  padding: "14px 18px 10px",
+                  borderBottom: `1px solid ${t.border}`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <span style={{ fontWeight: 600, fontSize: 14, color: t.text }}>
+                  Conquêtes par alliance
+                </span>
+                <Badge color={t.sageDeep} bg={t.sage}>7j</Badge>
+              </div>
+              <div style={{ maxHeight: 280, overflowY: "auto" }}>
+                {allianceConquests.length === 0 ? (
+                  <div style={{ padding: "20px 18px", color: t.textDim, fontSize: 12 }}>Aucune donnée</div>
+                ) : (
+                  allianceConquests.map((a, i) => (
+                    <div
+                      key={a.allianceId ?? i}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        padding: "9px 18px",
+                        borderBottom: i < allianceConquests.length - 1 ? `1px solid ${t.border}` : "none",
+                      }}
+                    >
+                      <div style={{ fontWeight: 700, fontSize: 12, color: t.sageDeep, minWidth: 20 }}>
+                        {i === 0 ? "🏆" : `${i + 1}`}
+                      </div>
+                      <div style={{ flex: 1, fontWeight: 500, fontSize: 12, color: t.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {a.allianceName ?? "Inconnu"}
+                      </div>
+                      <div
+                        style={{
+                          fontWeight: 700,
+                          fontSize: 13,
+                          color: a.count > 0 ? t.green : t.textDim,
+                          fontFamily: "var(--font-dm-mono), monospace",
+                        }}
+                      >
+                        +{a.count}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+
+            {/* Alliance Lost Cities */}
+            <Card pad="0">
+              <div
+                style={{
+                  padding: "14px 18px 10px",
+                  borderBottom: `1px solid ${t.border}`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <span style={{ fontWeight: 600, fontSize: 14, color: t.text }}>
+                  Villes perdues par alliance
+                </span>
+                <Badge color={t.roseDeep} bg={t.rose}>7j</Badge>
+              </div>
+              <div style={{ maxHeight: 280, overflowY: "auto" }}>
+                {allianceLosses.length === 0 ? (
+                  <div style={{ padding: "20px 18px", color: t.textDim, fontSize: 12 }}>Aucune perte</div>
+                ) : (
+                  allianceLosses.map((a, i) => (
+                    <div
+                      key={a.allianceId ?? i}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        padding: "9px 18px",
+                        borderBottom: i < allianceLosses.length - 1 ? `1px solid ${t.border}` : "none",
+                      }}
+                    >
+                      <div style={{ fontWeight: 700, fontSize: 12, color: t.roseDeep, minWidth: 20 }}>
+                        {i === 0 ? "🚫" : `${i + 1}`}
+                      </div>
+                      <div style={{ flex: 1, fontWeight: 500, fontSize: 12, color: t.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {a.allianceName ?? "Inconnu"}
+                      </div>
+                      <div
+                        style={{
+                          fontWeight: 700,
+                          fontSize: 13,
+                          color: t.red,
+                          fontFamily: "var(--font-dm-mono), monospace",
+                        }}
+                      >
+                        -{a.count}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+          </div>
+
           {/* Alliance ranking */}
           <Card pad="0">
             <div
@@ -432,6 +551,8 @@ export function DashboardClient({
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+                maxHeight: 220,
+                overflowY: "auto",
               }}
             >
               {topAlliances.map((a, i) => (
@@ -441,6 +562,7 @@ export function DashboardClient({
                     padding: "12px 18px",
                     borderRight:
                       i < topAlliances.length - 1 ? `1px solid ${t.border}` : "none",
+                    borderBottom: `1px solid ${t.border}`,
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
@@ -483,7 +605,7 @@ export function DashboardClient({
                         fontFamily: "var(--font-dm-mono), monospace",
                       }}
                     >
-                      {a.points.toLocaleString()}
+                      {a.points.toLocaleString("fr-FR")}
                     </span>
                     <span style={{ color: t.textLight, fontSize: 10 }}>pts</span>
                   </div>

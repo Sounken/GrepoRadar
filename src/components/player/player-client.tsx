@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@/components/theme-provider";
 import { Card } from "@/components/ui/card";
@@ -27,6 +27,7 @@ type Town = {
   points: number;
   islandNo: number;
   playerId: number | null;
+  islandId: number | null;
 };
 
 type HistoryPoint = {
@@ -52,6 +53,8 @@ interface PlayerClientProps {
   history: HistoryPoint[];
   recentConquers: Conquer[];
 }
+
+const fmt = (n: number) => n.toLocaleString("fr-FR");
 
 function timeAgo(date: Date): string {
   const h = Math.floor((Date.now() - new Date(date).getTime()) / 3600000);
@@ -85,6 +88,27 @@ export function PlayerClient({ player, towns, history, recentConquers }: PlayerC
   const pointGain =
     pointHistory.length >= 2 ? player.points - pointHistory[0] : null;
 
+  const dailyHistory = useMemo(() => {
+    const byDay = new Map<string, HistoryPoint>();
+    for (const h of history) {
+      const day = new Date(h.recordedAt).toISOString().split("T")[0];
+      byDay.set(day, h);
+    }
+    const sorted = [...byDay.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+    return sorted.map(([day, h], i) => {
+      const prev = sorted[i + 1]?.[1];
+      return {
+        day,
+        points: h.points,
+        pointsDelta: prev != null ? h.points - prev.points : null,
+        rank: h.rank,
+        rankDelta: prev != null ? h.rank - prev.rank : null,
+        towns: h.towns,
+        townsDelta: prev != null ? h.towns - prev.towns : null,
+      };
+    });
+  }, [history]);
+
   const inactivityRows = [
     {
       label: "Données",
@@ -96,10 +120,10 @@ export function PlayerClient({ player, towns, history, recentConquers }: PlayerC
       val:
         pointHistory.length >= 2
           ? pointGain! > 0
-            ? `+${pointGain!.toLocaleString()} pts`
+            ? `+${pointGain!.toLocaleString("fr-FR")} pts`
             : pointGain === 0
             ? "Stables (suspect)"
-            : `${pointGain!.toLocaleString()} pts`
+            : `${pointGain!.toLocaleString("fr-FR")} pts`
           : "Insuffisant",
       color:
         !pointGain ? t.textLight : pointGain > 0 ? t.green : pointGain === 0 ? t.red : t.amber,
@@ -182,7 +206,7 @@ export function PlayerClient({ player, towns, history, recentConquers }: PlayerC
             </div>
           </div>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            <StatPill label="Points" value={player.points.toLocaleString()} color={t.accent} bg={t.lavender} />
+            <StatPill label="Points" value={player.points.toLocaleString("fr-FR")} color={t.accent} bg={t.lavender} />
             <StatPill label="Villes" value={player.towns} bg={t.sage} />
             <StatPill label="Rang" value={`#${player.rank}`} bg={t.powder} />
           </div>
@@ -205,12 +229,12 @@ export function PlayerClient({ player, towns, history, recentConquers }: PlayerC
               <Sparkline data={pointHistory} color={t.accent} width={320} height={60} />
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
                 <span style={{ fontSize: 11, color: t.textLight }}>
-                  {pointHistory[0]?.toLocaleString()} pts
+                  {pointHistory[0]?.toLocaleString("fr-FR")} pts
                 </span>
                 {pointGain !== null && (
                   <span style={{ fontSize: 11, color: pointGain >= 0 ? t.accent : t.red, fontWeight: 600 }}>
                     {pointGain >= 0 ? "+" : ""}
-                    {pointGain.toLocaleString()}
+                    {pointGain.toLocaleString("fr-FR")}
                   </span>
                 )}
               </div>
@@ -263,7 +287,7 @@ export function PlayerClient({ player, towns, history, recentConquers }: PlayerC
               towns={mapTowns}
               highlightId={hlTown?.id}
               onTownClick={(town) => setHlTown((prev) => (prev?.id === town.id ? null : town))}
-              height={220}
+              height={340}
             />
           </div>
         </Card>
@@ -328,16 +352,88 @@ export function PlayerClient({ player, towns, history, recentConquers }: PlayerC
                     fontSize: 12,
                   }}
                 >
-                  {town.points.toLocaleString()}
+                  {town.points.toLocaleString("fr-FR")}
                 </td>
-                <td style={{ padding: "9px 14px", color: t.textLight, fontSize: 11 }}>
-                  #{town.islandNo}
+                <td style={{ padding: "9px 14px", color: t.textLight, fontSize: 11, fontFamily: "var(--font-dm-mono), monospace" }}>
+                  {town.islandId ?? "—"}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </Card>
+
+      {/* History table */}
+      {dailyHistory.length > 0 && (
+        <Card pad="0">
+          <div style={{ padding: "14px 18px 10px", borderBottom: `1px solid ${t.border}` }}>
+            <span style={{ fontWeight: 600, fontSize: 14, color: t.text }}>Historique</span>
+            <span style={{ color: t.textDim, fontSize: 11, marginLeft: 8 }}>30 jours</span>
+          </div>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+              <thead>
+                <tr style={{ background: t.bg }}>
+                  {["Date", "Points", "Rang", "Villes"].map((h) => (
+                    <th
+                      key={h}
+                      style={{
+                        padding: "8px 14px",
+                        textAlign: "left",
+                        color: t.textLight,
+                        fontSize: 10,
+                        fontWeight: 600,
+                        letterSpacing: 0.5,
+                        borderBottom: `1px solid ${t.border}`,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {dailyHistory.map((row, i) => {
+                  const d = new Date(row.day);
+                  const dateLabel = d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+                  const delta = (v: number | null, invert = false) => {
+                    if (v == null || v === 0) return null;
+                    const pos = invert ? v < 0 : v > 0;
+                    return (
+                      <span style={{ color: pos ? t.green : t.red, fontSize: 10, marginLeft: 4 }}>
+                        {v > 0 ? "+" : ""}{v.toLocaleString("fr-FR")}
+                      </span>
+                    );
+                  };
+                  return (
+                    <tr
+                      key={row.day}
+                      style={{ borderBottom: i < dailyHistory.length - 1 ? `1px solid ${t.border}` : "none" }}
+                      onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = t.lavender + "44")}
+                      onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "transparent")}
+                    >
+                      <td style={{ padding: "8px 14px", color: t.textMid, whiteSpace: "nowrap" }}>{dateLabel}</td>
+                      <td style={{ padding: "8px 14px", fontFamily: "var(--font-dm-mono), monospace" }}>
+                        <span style={{ color: t.accent, fontWeight: 600 }}>{row.points.toLocaleString("fr-FR")}</span>
+                        {delta(row.pointsDelta)}
+                      </td>
+                      <td style={{ padding: "8px 14px", fontFamily: "var(--font-dm-mono), monospace" }}>
+                        <span style={{ color: t.textMid }}>#{row.rank}</span>
+                        {delta(row.rankDelta, true)}
+                      </td>
+                      <td style={{ padding: "8px 14px", fontFamily: "var(--font-dm-mono), monospace" }}>
+                        <span style={{ color: t.textMid }}>{row.towns}</span>
+                        {delta(row.townsDelta)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
 
       {/* Recent conquests */}
       {recentConquers.length > 0 && (

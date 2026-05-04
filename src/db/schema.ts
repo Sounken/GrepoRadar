@@ -95,6 +95,7 @@ export const playerHistory = pgTable(
     points: integer("points").notNull(),
     rank: smallint("rank").notNull(),
     towns: smallint("towns").notNull(),
+    allianceId: integer("alliance_id"),
     recordedAt: timestamp("recorded_at").notNull().defaultNow(),
   },
   (t) => [

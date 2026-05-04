@@ -2,8 +2,8 @@ import { notFound } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { PlayerClient } from "@/components/player/player-client";
 import { db } from "@/db";
-import { players, alliances, towns, conquers, playerHistory } from "@/db/schema";
-import { eq, desc, sql, gte } from "drizzle-orm";
+import { players, alliances, towns, conquers, playerHistory, islands } from "@/db/schema";
+import { eq, desc, sql } from "drizzle-orm";
 
 export const revalidate = 1800;
 
@@ -28,8 +28,18 @@ async function getPlayerData(id: number) {
       .limit(1),
 
     db
-      .select()
+      .select({
+        id: towns.id,
+        name: towns.name,
+        x: towns.x,
+        y: towns.y,
+        points: towns.points,
+        islandNo: towns.islandNo,
+        playerId: towns.playerId,
+        islandId: islands.id,
+      })
       .from(towns)
+      .leftJoin(islands, sql`${towns.x} = ${islands.x} AND ${towns.y} = ${islands.y}`)
       .where(eq(towns.playerId, id))
       .orderBy(desc(towns.points)),
 
