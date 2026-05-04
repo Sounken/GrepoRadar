@@ -13,7 +13,7 @@ jobs:
         run: |
           response=$(curl -s -w "\n%{http_code}" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            "${{ vars.APP_URL }}/api/cron/sync")
+            "https://greporadar-app.vercel.app/api/cron/sync")
           body=$(echo "$response" | head -n -1)
           status=$(echo "$response" | tail -n 1)
           echo "Status: $status"
