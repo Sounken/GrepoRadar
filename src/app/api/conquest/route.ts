@@ -156,12 +156,10 @@ export async function GET(request: Request) {
       : 0;
     const inactiveDays = isGhost ? null : calcInactiveDays(hist);
 
-    // Score sur 100 : inactivité (50) + points de la ville (30) + proximité (20)
-    // Les fantômes obtiennent directement le max d'inactivité
-    const MAX_TOWN_POINTS = 30000;
-    const pointsScore = Math.min(t.points / MAX_TOWN_POINTS, 1) * 30;
-    const distScore = (1 - Math.min(t.distance, maxDistance) / maxDistance) * 20;
-    const targetScore = Math.round(inactivity * 0.5 + pointsScore + distScore);
+    // Score sur 100 : inactivité (80) + points ville (15, plafonné à 10k) + proximité (5)
+    const pointsScore = Math.min(t.points / 10000, 1) * 15;
+    const distScore = (1 - Math.min(t.distance, maxDistance) / maxDistance) * 5;
+    const targetScore = Math.min(Math.round(inactivity * 0.8 + pointsScore + distScore), 100);
 
     return { ...t, inactivity, inactiveDays, targetScore };
   });
