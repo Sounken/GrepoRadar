@@ -32,6 +32,21 @@ const NAV = [
       </svg>
     ),
   },
+  {
+    id: "troupes",
+    href: "/troupes",
+    label: "Troupes",
+    icon: (size = 14) => (
+      <svg width={size} height={size} viewBox="0 0 15 15" fill="none">
+        <circle cx="4" cy="4" r="2.2" fill="currentColor" />
+        <circle cx="11" cy="4" r="2.2" fill="currentColor" />
+        <circle cx="7.5" cy="4" r="2.2" fill="currentColor" />
+        <rect x="1" y="8" width="4" height="5.5" rx="1.2" fill="currentColor" />
+        <rect x="5.5" y="8" width="4" height="5.5" rx="1.2" fill="currentColor" />
+        <rect x="10" y="8" width="4" height="5.5" rx="1.2" fill="currentColor" />
+      </svg>
+    ),
+  },
 ];
 
 export function Sidebar() {
