@@ -47,6 +47,17 @@ const NAV = [
       </svg>
     ),
   },
+  {
+    id: "simulation",
+    href: "/simulation",
+    label: "Simulation",
+    icon: (size = 14) => (
+      <svg width={size} height={size} viewBox="0 0 15 15" fill="none">
+        <path d="M7.5 1L9.5 5.5H14L10.5 8.5L11.8 13L7.5 10.2L3.2 13L4.5 8.5L1 5.5H5.5L7.5 1Z" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinejoin="round" />
+        <circle cx="7.5" cy="7" r="1.4" fill="currentColor" />
+      </svg>
+    ),
+  },
 ];
 
 export function Sidebar() {
